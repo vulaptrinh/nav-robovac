@@ -86,6 +86,9 @@ try {
             } elseif ($cmd === 'dock') {
                 $client->returnToDock();
                 jsonResponse(true, null, 'Đã gửi lệnh quay về dock sạc!');
+            } elseif ($cmd === 'find') {
+                $client->findRobot();
+                jsonResponse(true, null, 'Đã gửi lệnh phát chuông tìm Robot (tè té te)!');
             } elseif ($cmd === 'suction') {
                 $mode = $_POST['mode'] ?? 'Boost_IQ';
                 $client->setSuctionMode($mode);

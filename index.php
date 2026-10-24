@@ -314,16 +314,16 @@
 
         .control-btns {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
             margin-top: 12px;
         }
 
         .btn-cmd {
-            padding: 12px 10px;
+            padding: 12px 6px;
             border-radius: 10px;
             border: none;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
             display: flex;
@@ -355,6 +355,13 @@
             box-shadow: 0 4px 10px rgba(139, 92, 246, 0.25);
         }
         .btn-dock:hover { background: #7c3aed; }
+
+        .btn-find {
+            background: #0284c7;
+            color: white;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+        }
+        .btn-find:hover { background: #0369a1; }
 
         .suction-selector {
             margin-top: 16px;
@@ -717,6 +724,10 @@
                     <span style="font-size:18px;">⚡</span>
                     <span>Về sạc</span>
                 </button>
+                <button class="btn-cmd btn-find" onclick="sendCommand('find')">
+                    <span style="font-size:18px;">🔔</span>
+                    <span>Tìm Robot</span>
+                </button>
             </div>
 
             <div class="suction-selector">
@@ -802,6 +813,7 @@
 
 <script>
     let currentBattery = 0;
+    let isCurrentAtDock = false;
     let pollInterval = null;
 
     function showToast(msg) {
@@ -822,6 +834,8 @@
 
             const dev = data.data.device;
             const settings = data.data.settings;
+
+            isCurrentAtDock = !!(dev.is_charging || dev.activity_code === 'Charging' || dev.activity_code === 'standby');
 
             // 1. Cập nhật Pin
             currentBattery = dev.battery;
@@ -929,7 +943,11 @@
             form.append('cmd', cmd);
             const res = await fetch('api.php?action=command', { method: 'POST', body: form });
             const data = await res.json();
-            showToast(data.message || (data.success ? 'Thành công!' : 'Thất bại!'));
+            if (cmd === 'dock' && isCurrentAtDock) {
+                showToast("Đã gửi lệnh về dock! (Robot hiện đang ở sẵn trong dock)");
+            } else {
+                showToast(data.message || (data.success ? 'Thành công!' : 'Thất bại!'));
+            }
             setTimeout(fetchStatus, 1000);
         } catch (err) {
             showToast("Lỗi gửi lệnh: " + err.message);

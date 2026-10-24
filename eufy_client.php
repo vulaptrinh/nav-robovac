@@ -525,8 +525,14 @@ class RoboVacAVClient {
     public function returnToDock() {
         return $this->tuyaClient->publish_dps($this->devId, [
             '101' => true,
-            '103' => true,
+            '103' => false,
             '2'   => false
+        ]);
+    }
+
+    public function findRobot() {
+        return $this->tuyaClient->publish_dps($this->devId, [
+            '103' => true
         ]);
     }
 
