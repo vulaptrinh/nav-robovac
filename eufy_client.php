@@ -524,7 +524,9 @@ class RoboVacAVClient {
 
     public function returnToDock() {
         return $this->tuyaClient->publish_dps($this->devId, [
-            '103' => true
+            '101' => true,
+            '103' => true,
+            '2'   => false
         ]);
     }
 

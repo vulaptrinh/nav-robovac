@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NAV • Hệ Thống Điều Khiển Robot Hút Bụi</title>
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230f172a'/%3E%3Cstop offset='100%25' stop-color='%230284c7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23bg)'/%3E%3Cpath d='M18 46V18h6l16 26V18h6v28h-6L24 20v26z' fill='%2338bdf8'/%3E%3Ccircle cx='43' cy='17' r='3' fill='%2310b981'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -73,16 +73,19 @@
             border-radius: 16px;
             box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);
             transition: transform 0.3s ease;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #0f172a;
         }
 
         .nav-logo-box:hover {
             transform: scale(1.05) rotate(2deg);
         }
 
-        .nav-logo-img {
+        .nav-logo-box svg {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            display: block;
         }
 
         .nav-brand-title {
@@ -589,7 +592,52 @@
     <div class="header">
         <div class="header-title-box">
             <div class="nav-logo-box">
-                <img src="assets/logo.svg" alt="NAV Logo" class="nav-logo-img">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+                  <defs>
+                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#0f172a"/>
+                      <stop offset="50%" stop-color="#1e1b4b"/>
+                      <stop offset="100%" stop-color="#0284c7"/>
+                    </linearGradient>
+                    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#38bdf8"/>
+                      <stop offset="50%" stop-color="#6366f1"/>
+                      <stop offset="100%" stop-color="#a855f7"/>
+                    </linearGradient>
+                    <linearGradient id="accentGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#06b6d4"/>
+                      <stop offset="100%" stop-color="#10b981"/>
+                    </linearGradient>
+                    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.8"/>
+                      <stop offset="50%" stop-color="#818cf8" stop-opacity="0.2"/>
+                      <stop offset="100%" stop-color="#c084fc" stop-opacity="0.8"/>
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="8" result="blur"/>
+                      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                    </filter>
+                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0284c7" flood-opacity="0.35"/>
+                    </filter>
+                  </defs>
+                  <rect x="25" y="25" width="450" height="450" rx="110" fill="url(#bgGrad)" stroke="url(#ringGrad)" stroke-width="4" filter="url(#shadow)"/>
+                  <circle cx="250" cy="250" r="180" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.15" stroke-dasharray="6 8"/>
+                  <circle cx="250" cy="250" r="130" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-opacity="0.2" stroke-dasharray="4 6"/>
+                  <line x1="250" y1="45" x2="250" y2="60" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                  <line x1="250" y1="440" x2="250" y2="455" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                  <line x1="45" y1="250" x2="60" y2="250" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                  <line x1="440" y1="250" x2="455" y2="250" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                  <g filter="url(#glow)">
+                    <path d="M 140 340 L 140 160 Q 140 145 155 145 L 180 145 Q 195 145 195 160 L 195 340 Q 195 355 180 355 L 155 355 Q 140 355 140 340 Z" fill="url(#primaryGrad)"/>
+                    <path d="M 185 155 L 305 325 Q 315 340 330 335 L 340 330 Q 355 320 345 305 L 225 135 Q 215 120 200 125 L 190 130 Q 175 140 185 155 Z" fill="url(#accentGrad)"/>
+                    <path d="M 305 340 L 305 160 Q 305 145 320 145 L 345 145 Q 360 145 360 160 L 360 340 Q 360 355 345 355 L 320 355 Q 305 355 305 340 Z" fill="url(#primaryGrad)"/>
+                    <circle cx="332" cy="148" r="14" fill="#38bdf8" filter="url(#glow)"/>
+                    <circle cx="332" cy="148" r="6" fill="#ffffff"/>
+                    <path d="M 125 380 Q 250 425 375 380" fill="none" stroke="url(#accentGrad)" stroke-width="5" stroke-linecap="round"/>
+                    <circle cx="250" cy="402" r="4" fill="#10b981" filter="url(#glow)"/>
+                  </g>
+                </svg>
             </div>
             <div>
                 <div class="nav-brand-title">
