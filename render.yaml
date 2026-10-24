@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: nav-robovac
+    env: docker
+    plan: free
+    region: singapore
+    autoDeploy: true
