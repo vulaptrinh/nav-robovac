@@ -306,6 +306,7 @@
 
         .status-cleaning { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
         .status-charging { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .status-recharge { background: #ede9fe; color: #6b21a8; border: 1px solid #ddd6fe; }
         .status-full     { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .status-ready    { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
         .status-standby  { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
@@ -508,6 +509,67 @@
 
         .log-item:last-child { border-bottom: none; }
         .log-item b { color: var(--text-main); }
+
+        /* Voice Assistant Card */
+        .voice-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .voice-volume-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .voice-volume-slider {
+            width: 80px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .btn-voice-test {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-voice-test:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .voice-last-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #166534;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            min-height: 44px;
+        }
 
         /* Schedule Card */
         .schedule-table {
@@ -778,9 +840,48 @@
                 <div class="log-item">Chưa có bản ghi kích hoạt nào.</div>
             </div>
         </div>
+
+        <!-- Card 4: Trợ Lý Giọng Nói Thông Minh -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🎙️ Trợ Lý Giọng Nói NAV</div>
+                <small style="color:var(--text-muted); font-size:12px;">Web Speech AI</small>
+            </div>
+
+            <div class="switch-container">
+                <div class="switch-info">
+                    <h4>Phát giọng nói tự động</h4>
+                    <p>Báo khi xuất phát, lỗi to tiếng & hết pin về trạm</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-voice" checked onchange="toggleVoiceAssistant(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="voice-controls">
+                <div class="voice-volume-box">
+                    <span>🔊 Âm lượng:</span>
+                    <input type="range" class="voice-volume-slider" id="voice-volume" min="10" max="100" value="100" oninput="changeVoiceVolume(this.value)">
+                    <span id="voice-vol-txt">100%</span>
+                </div>
+                <button class="btn-voice-test" onclick="testVoiceSpeech()">
+                    <span>▶</span> Thử giọng
+                </button>
+            </div>
+
+            <div class="voice-last-box">
+                <span style="font-size:16px;">📢</span>
+                <span id="voice-last-spoken">Trợ lý giọng nói NAV đang sẵn sàng thông báo...</span>
+            </div>
+
+            <div style="font-size:11px; color:var(--text-muted); margin-top:10px; line-height:1.4;">
+                💡 <i>Tự động phát chuông & đọc to tiếng Việt khi robot bắt đầu chạy, gặp sự cố kẹt và khi pin yếu quay về dock sạc.</i>
+            </div>
+        </div>
     </div>
 
-    <!-- Card 4: Lịch trình hoạt động -->
+    <!-- Card 5: Lịch trình hoạt động -->
     <div class="card">
         <div class="card-header">
             <div class="card-title">📅 Lịch Trình Hoạt Động (RoboVac AV)</div>
@@ -815,6 +916,190 @@
     let currentBattery = 0;
     let isCurrentAtDock = false;
     let pollInterval = null;
+    let prevDevState = null;
+
+    // --- HỆ THỐNG TRỢ LÝ GIỌNG NÓI NAV (WEB SPEECH AI) ---
+    class NAVVoiceAssistant {
+        constructor() {
+            this.enabled = localStorage.getItem('nav_voice_enabled') !== 'false';
+            this.volume = parseFloat(localStorage.getItem('nav_voice_volume') || '1.0');
+            this.synth = window.speechSynthesis;
+            this.audioCtx = null;
+            this.lastSpokenText = '';
+            this.lastSpokenTime = 0;
+            this.viVoice = null;
+
+            this.initVoices();
+            if (window.speechSynthesis && speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = () => this.initVoices();
+            }
+        }
+
+        initVoices() {
+            if (!this.synth) return;
+            const voices = this.synth.getVoices();
+            // Ưu tiên nhận dạng giọng tiếng Việt (vi-VN, Google tiếng Việt, Microsoft An/Nam...)
+            this.viVoice = voices.find(v => (v.lang && (v.lang.startsWith('vi') || v.lang.includes('VIE'))) || (v.name && v.name.toLowerCase().includes('vietnam'))) || null;
+        }
+
+        playTone(type = 'info') {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                if (!this.audioCtx) this.audioCtx = new AudioContext();
+                if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+
+                const now = this.audioCtx.currentTime;
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioCtx.destination);
+
+                if (type === 'error') {
+                    // Còi báo động khẩn cấp 2 nhịp cao độ
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(880, now);
+                    osc.frequency.setValueAtTime(440, now + 0.15);
+                    osc.frequency.setValueAtTime(880, now + 0.3);
+                    gain.gain.setValueAtTime(this.volume * 0.45, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else {
+                    // Chuông thông báo êm dịu (C5 -> E5)
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.12);
+                    gain.gain.setValueAtTime(this.volume * 0.35, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                }
+            } catch (e) {
+                console.warn("AudioContext tone error:", e);
+            }
+        }
+
+        speak(text, type = 'info', force = false) {
+            if (!this.enabled && !force) return;
+            if (!text || !window.speechSynthesis) return;
+
+            const now = Date.now();
+            if (!force && this.lastSpokenText === text && (now - this.lastSpokenTime < 12000)) {
+                return;
+            }
+
+            this.lastSpokenText = text;
+            this.lastSpokenTime = now;
+
+            // Phát âm chuông trước
+            this.playTone(type);
+
+            const lastBox = document.getElementById('voice-last-spoken');
+            if (lastBox) {
+                lastBox.textContent = `📢 "${text}"`;
+            }
+
+            setTimeout(() => {
+                if (this.synth.speaking) {
+                    this.synth.cancel();
+                }
+
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'vi-VN';
+                utter.volume = Math.min(1.0, Math.max(0.1, this.volume));
+                utter.rate = 0.95;
+                utter.pitch = (type === 'error') ? 1.15 : 1.0;
+
+                if (this.viVoice) {
+                    utter.voice = this.viVoice;
+                }
+
+                this.synth.speak(utter);
+            }, 300);
+        }
+    }
+
+    const voiceAssistant = new NAVVoiceAssistant();
+
+    function toggleVoiceAssistant(enabled) {
+        voiceAssistant.enabled = enabled;
+        localStorage.setItem('nav_voice_enabled', enabled ? 'true' : 'false');
+        showToast(enabled ? "Đã BẬT trợ lý giọng nói NAV!" : "Đã TẮT trợ lý giọng nói!");
+        if (enabled) {
+            voiceAssistant.speak("Trợ lý giọng nói NAV đã sẵn sàng!", 'info', true);
+        }
+    }
+
+    function changeVoiceVolume(val) {
+        const vol = parseInt(val, 10);
+        voiceAssistant.volume = vol / 100;
+        localStorage.setItem('nav_voice_volume', (vol / 100).toString());
+        document.getElementById('voice-vol-txt').textContent = vol + '%';
+    }
+
+    function testVoiceSpeech() {
+        if (voiceAssistant.audioCtx && voiceAssistant.audioCtx.state === 'suspended') {
+            voiceAssistant.audioCtx.resume();
+        }
+        voiceAssistant.speak("Xin chào! Trợ lý giọng nói NAV đã sẵn sàng. Robot sẽ tự động nói khi xuất phát chạy, phát loa báo lỗi to tiếng và thông báo khi hết pin về sạc!", 'info', true);
+    }
+
+    // Tự động phân tích và kích hoạt giọng nói theo trạng thái Robot
+    function handleVoiceAlerts(dev) {
+        if (!voiceAssistant || !voiceAssistant.enabled) return;
+
+        const isCleaningNow = !!(dev.is_cleaning || dev.activity_code === 'Running');
+        const isReturningNow = !!(dev.is_returning || dev.activity_code === 'Recharge');
+        const isChargingNow = !!(dev.is_charging || dev.activity_code === 'Charging');
+        const errorCodeNow = (dev.error_code && dev.error_code !== 'no_error') ? dev.error_code : 'no_error';
+
+        if (!prevDevState) {
+            // Lần đầu nạp trang web, chỉ ghi nhớ trạng thái nền
+            prevDevState = {
+                is_cleaning: isCleaningNow,
+                is_returning: isReturningNow,
+                is_charging: isChargingNow,
+                error_code: errorCodeNow,
+                battery: dev.battery || 0
+            };
+            return;
+        }
+
+        // 1. Robot bắt đầu chạy hút bụi
+        if (isCleaningNow && !prevDevState.is_cleaning) {
+            voiceAssistant.speak("Robot NAV bắt đầu xuất phát hút bụi. Chúc bạn một ngày sạch sẽ!", 'info');
+        }
+
+        // 2. Robot gặp sự cố lỗi -> Nói lớn tiếng báo lỗi gì
+        if (errorCodeNow !== 'no_error' && errorCodeNow !== prevDevState.error_code) {
+            const desc = dev.error_desc || errorCodeNow;
+            voiceAssistant.speak("Cảnh báo khẩn cấp! Robot RoboVac AV đang gặp sự cố: " + desc + "! Vui lòng kiểm tra và xử lý ngay!", 'error');
+        }
+
+        // 3. Robot hết pin hoặc quay về dock sạc
+        if (isReturningNow && !prevDevState.is_returning) {
+            if (dev.battery <= 20) {
+                voiceAssistant.speak("Robot sắp hết pin, mức pin hiện chỉ còn " + dev.battery + " phần trăm. Robot đang tự động quay về trạm sạc!", 'info');
+            } else {
+                voiceAssistant.speak("Robot đang tự động quay về trạm sạc. Vui lòng không cản đường đi!", 'info');
+            }
+        }
+
+        // 4. Robot về đến trạm sạc an toàn
+        if (isChargingNow && !prevDevState.is_charging && prevDevState.is_returning) {
+            voiceAssistant.speak("Robot đã về trạm sạc an toàn và đang nạp pin!", 'info');
+        }
+
+        // Lưu lại trạng thái
+        prevDevState = {
+            is_cleaning: isCleaningNow,
+            is_returning: isReturningNow,
+            is_charging: isChargingNow,
+            error_code: errorCodeNow,
+            battery: dev.battery || 0
+        };
+    }
 
     function showToast(msg) {
         const toast = document.getElementById('toast-msg');
@@ -865,8 +1150,12 @@
             let icon = '🤖';
             if (dev.is_cleaning) icon = '🧹';
             else if (dev.is_charging) icon = '⚡';
+            else if (dev.is_returning) icon = '🏠';
             else if (dev.error_code !== 'no_error') icon = '⚠️';
             document.getElementById('status-icon').textContent = icon;
+
+            // Kích hoạt Trợ lý giọng nói theo trạng thái Robot
+            handleVoiceAlerts(dev);
 
             document.getElementById('select-suction').value = dev.suction_mode || 'Boost_IQ';
 
@@ -939,6 +1228,17 @@
 
     async function sendCommand(cmd) {
         try {
+            // Giọng nói phản hồi tức thì khi người dùng bấm nút điều khiển
+            if (cmd === 'start') {
+                voiceAssistant.speak("Đã phát lệnh bắt đầu hút bụi!", 'info');
+            } else if (cmd === 'pause') {
+                voiceAssistant.speak("Đã phát lệnh tạm dừng hút bụi!", 'info');
+            } else if (cmd === 'dock') {
+                voiceAssistant.speak("Đã phát lệnh cho robot quay về trạm sạc!", 'info');
+            } else if (cmd === 'find') {
+                voiceAssistant.speak("Đang phát chuông định vị robot!", 'info');
+            }
+
             const form = new FormData();
             form.append('cmd', cmd);
             const res = await fetch('api.php?action=command', { method: 'POST', body: form });
@@ -1008,6 +1308,16 @@
 
     // Khởi tạo
     document.addEventListener('DOMContentLoaded', () => {
+        // Khôi phục cài đặt giọng nói đã lưu
+        const savedVoiceEnabled = localStorage.getItem('nav_voice_enabled') !== 'false';
+        const savedVoiceVol = parseInt(localStorage.getItem('nav_voice_volume') ? parseFloat(localStorage.getItem('nav_voice_volume')) * 100 : 100, 10);
+        const toggleVoiceEl = document.getElementById('toggle-voice');
+        if (toggleVoiceEl) toggleVoiceEl.checked = savedVoiceEnabled;
+        const volEl = document.getElementById('voice-volume');
+        if (volEl) volEl.value = savedVoiceVol;
+        const volTxt = document.getElementById('voice-vol-txt');
+        if (volTxt) volTxt.textContent = savedVoiceVol + '%';
+
         fetchStatus();
         fetchSchedules();
         // Tự động kiểm tra mỗi 15 giây
@@ -1015,6 +1325,13 @@
             fetchStatus();
         }, 15000);
     });
+
+    // Mở khóa âm thanh trình duyệt ngay khi người dùng chạm vào trang
+    document.addEventListener('click', () => {
+        if (voiceAssistant && voiceAssistant.audioCtx && voiceAssistant.audioCtx.state === 'suspended') {
+            voiceAssistant.audioCtx.resume();
+        }
+    }, { once: true });
 </script>
 
 </body>

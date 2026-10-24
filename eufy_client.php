@@ -375,6 +375,22 @@ class RoboVacAVClient {
         );
     }
 
+    public static function translateErrorCode($code) {
+        $dict = [
+            'no_error'            => 'Bình thường, không có lỗi',
+            'Wheel_error'         => 'Kẹt bánh xe điều hướng, vui lòng gỡ tóc hoặc vật cản ở bánh xe',
+            'Crash_sensor_error'  => 'Kẹt cản trước va chạm, vui lòng gõ nhẹ hoặc lau sạch cản trước',
+            'Drop_sensor_error'   => 'Cảm biến chống rơi bị bẩn hoặc robot đang ở mép bậc thang nguy hiểm',
+            'Brush_error'         => 'Kẹt chổi cuốn chính, vui lòng tháo gỡ rác và tóc quấn quanh chổi',
+            'Side_brush_error'    => 'Kẹt chổi quét bên hông, vui lòng gỡ dị vật quấn ở chổi',
+            'Suction_error'       => 'Lỗi quạt hút hoặc hộp bụi quá đầy gây nghẽn, vui lòng vệ sinh hộp rác',
+            'Stuck'               => 'Robot bị mắc kẹt không di chuyển được, vui lòng nhấc sang vị trí thoáng hơn',
+            'Battery_low'         => 'Pin yếu, robot cần quay về trạm sạc ngay',
+            'Trapped'             => 'Robot bị kẹt trong không gian hẹp, vui lòng giải cứu robot'
+        ];
+        return $dict[$code] ?? ("Sự cố mã lỗi: " . $code);
+    }
+
     public function getDeviceStatus() {
         $devices = $this->tuyaClient->list_devices();
         $targetDev = null;
@@ -403,9 +419,18 @@ class RoboVacAVClient {
         $badgeClass = 'status-standby';
         $isCharging = false;
         $isCleaning = false;
+        $isReturning = false;
+        $errorDesc = self::translateErrorCode($errorCode);
 
         $actLower = strtolower($activityCode);
-        if ($actLower === 'charging' || $actLower === 'recharge' || strpos($actLower, 'charge') !== false) {
+        if ($errorCode !== 'no_error' && !empty($errorCode)) {
+            $activityText = 'Báo lỗi: ' . $errorDesc;
+            $badgeClass = 'status-error';
+        } elseif ($actLower === 'recharge' || strpos($actLower, 'recharge') !== false) {
+            $activityText = 'Đang quay về dock sạc';
+            $badgeClass = 'status-recharge';
+            $isReturning = true;
+        } elseif ($actLower === 'charging' || strpos($actLower, 'charge') !== false) {
             if ($battery >= 100) {
                 $activityText = 'Đã sạc đầy 100% (Ở Dock)';
                 $badgeClass = 'status-full';
@@ -424,9 +449,6 @@ class RoboVacAVClient {
         } elseif ($actLower === 'sleeping') {
             $activityText = 'Đang ngủ / Tiết kiệm pin';
             $badgeClass = 'status-sleeping';
-        } elseif ($errorCode !== 'no_error') {
-            $activityText = 'Báo lỗi: ' . $errorCode;
-            $badgeClass = 'status-error';
         } else {
             $activityText = 'Đang ở Dock chờ / Sẵn sàng';
             $badgeClass = 'status-ready';
@@ -443,11 +465,13 @@ class RoboVacAVClient {
             'badge_class'    => $badgeClass,
             'is_charging'    => $isCharging,
             'is_cleaning'    => $isCleaning,
+            'is_returning'   => $isReturning,
             'work_state'     => $workState,
             'power_state'    => $powerState,
             'suction_mode'   => $suctionMode,
             'clean_mode'     => $cleanMode,
             'error_code'     => $errorCode,
+            'error_desc'     => $errorDesc,
             'ip'             => $targetDev['ip'] ?? '',
             'mac'            => $targetDev['mac'] ?? '',
             'updated_at'     => date('H:i:s d/m/Y'),
